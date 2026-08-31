@@ -1,0 +1,39 @@
+name: Обновление реестра
+
+# Запускается каждый день по расписанию, а также вручную — кнопкой
+# "Run workflow" на вкладке Actions в репозитории (удобно для проверки).
+on:
+  schedule:
+    - cron: "0 4 * * *"   # 04:00 по UTC = 07:00 по Москве
+  workflow_dispatch: {}
+
+# Разрешение боту сохранять изменения обратно в репозиторий
+permissions:
+  contents: write
+
+jobs:
+  update-registry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Скачать код репозитория
+        uses: actions/checkout@v4
+
+      - name: Установить Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Запустить обновление данных реестра
+        run: python scripts/update_registry.py
+
+      - name: Сохранить изменения, если они есть
+        run: |
+          git config user.name "registry-bot"
+          git config user.email "actions@github.com"
+          git add data/
+          if git diff --staged --quiet; then
+            echo "Изменений нет — реестр не обновился или уже актуален."
+          else
+            git commit -m "Автообновление реестра $(date -u +%Y-%m-%d)"
+            git push
+          fi
