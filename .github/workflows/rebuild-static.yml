@@ -1,0 +1,42 @@
+name: Пересборка классификатора/1875/719
+
+# Только вручную — кнопкой "Run workflow" на вкладке Actions.
+# В отличие от обновления реестра, этот шаг не обращается ни к каким внешним
+# сайтам (только к файлам source_data/ внутри самого репозитория), поэтому
+# надёжно работает прямо на серверах GitHub — не нужен ни ваш компьютер,
+# ни обход блокировок.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Скачать код репозитория
+        uses: actions/checkout@v4
+
+      - name: Установить Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Установить зависимости
+        run: python -m pip install --quiet openpyxl striprtf
+
+      - name: Пересобрать index.html
+        run: python scripts/build_static_data.py
+
+      - name: Сохранить изменения, если они есть
+        run: |
+          git config user.name "rebuild-bot"
+          git config user.email "actions@github.com"
+          git add index.html
+          if git diff --staged --quiet; then
+            echo "Изменений нет."
+          else
+            git commit -m "Пересборка классификатора/1875/719 $(date -u +%Y-%m-%d)"
+            git push
+          fi
